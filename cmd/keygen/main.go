@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,15 @@ func main() {
 	pubkeyRe := regexp.MustCompile(`83e(0[1-9]|1[0-2])23$`)
 	nGoroutines := runtime.NumCPU()
 
+	vanityReStr := flag.String("vanity", "",
+		"A vanity regex that the public key must also match.")
+	flag.Parse()
+
+	var vanityRe *regexp.Regexp
+	if *vanityReStr != "" {
+		vanityRe = regexp.MustCompile(*vanityReStr)
+	}
+
 	valid := func(pubkey []byte) bool {
 		// Fail fast if the key doesn't match '83e', so the more expensive
 		// check on the hex string happens on fewer candidates.
@@ -27,6 +37,11 @@ func main() {
 		}
 
 		pubhex := hex.EncodeToString(pubkey)
+
+		if vanityRe != nil && !vanityRe.MatchString(pubhex) {
+			return false
+		}
+
 		return pubkeyRe.MatchString(pubhex)
 	}
 
